@@ -1,0 +1,13 @@
+{
+  "name": "nagham",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "seed:demo": "npm --prefix server run seed:demo",
+    "build": "npm --prefix client run build",
+    "android": "npm --prefix client run android:sync && npm --prefix client run android:open"
+  }
+}

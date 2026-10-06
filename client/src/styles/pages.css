@@ -1,0 +1,78 @@
+/* Playlist list rows */
+.pl-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  text-align: left;
+  border-radius: var(--r-md);
+}
+
+.pl-row .meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pl-row .t {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.pl-row .d {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.pl-row .s {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.pl-new-ico {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px dashed rgba(91, 209, 127, 0.4);
+  flex-shrink: 0;
+}
+
+.pl-row.new .t {
+  color: var(--accent);
+}
+
+.artists-grid .tile.round .cover {
+  margin-bottom: 10px;
+}
+
+a.setting-row,
+button.setting-row {
+  color: inherit;
+}
+
+.setting-row .ico {
+  display: grid;
+  place-items: center;
+}
+
+/* Desktop: give the phone layout a little breathing room */
+@media (min-width: 720px) {
+  :root {
+    --gutter: 28px;
+  }
+  .page-title {
+    font-size: 36px;
+  }
+  .grid-2 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .quick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
