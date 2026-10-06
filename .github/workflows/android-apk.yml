@@ -4,7 +4,7 @@ name: Android APK
 
 on:
   push:
-      branches: [main, master]
+    branches: [main, master]
   workflow_dispatch:
     inputs:
       api_url:
@@ -14,7 +14,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: client
@@ -23,31 +23,32 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: client/package-lock.json
+          node-version: 22
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
       - uses: android-actions/setup-android@v3
 
-      - run: npm ci
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Build web app
         run: npm run build
         env:
           VITE_API_URL: ${{ github.event.inputs.api_url || vars.VITE_API_URL || '' }}
 
-      - run: npx cap sync android
+      - name: Copy web app into Android project
+        run: npx cap sync android
 
       - name: Build APK
         working-directory: client/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
