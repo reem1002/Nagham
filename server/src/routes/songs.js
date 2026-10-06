@@ -12,6 +12,7 @@ import { importAudioFile } from '../utils/importAudio.js';
 import { findOrCreateArtist, findOrCreateAlbum } from '../utils/library.js';
 import { looseRegex } from '../utils/text.js';
 import { cleanupOrphans } from '../utils/cleanup.js';
+import { removeAudio, storeCover } from '../utils/storage.js';
 
 const router = Router();
 
@@ -121,6 +122,11 @@ router.get(
   asyncHandler(async (req, res) => {
     const song = await Song.findOne({ _id: req.params.id, owner: req.user._id }).populate('artist', 'name');
     if (!song) throw new HttpError(404, 'Song not found');
+    if (song.file.storage === 'cloudinary' && song.file.url) {
+      // Cloudinary serves the bytes (with Range + CORS); we only check ownership here
+      const url = req.query.download ? song.file.url.replace('/upload/', '/upload/fl_attachment/') : song.file.url;
+      return res.redirect(302, url);
+    }
     const filePath = path.join(AUDIO_DIR, song.file.path);
     if (!fs.existsSync(filePath)) throw new HttpError(410, 'Audio file is missing on the server');
     if (req.query.download) {
@@ -170,9 +176,10 @@ router.post(
   coverUpload.single('cover'),
   asyncHandler(async (req, res) => {
     if (!req.file) throw new HttpError(400, 'Send an image in the "cover" field');
+    const cover = await storeCover({ tempPath: req.file.path, name: req.file.filename });
     const song = await Song.findOneAndUpdate(
       { _id: req.params.id, owner: req.user._id },
-      { cover: `/media/covers/${req.file.filename}` },
+      { cover },
       { new: true }
     ).populate(SONG_POPULATE);
     if (!song) throw new HttpError(404, 'Song not found');
@@ -185,7 +192,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const song = await Song.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
     if (!song) throw new HttpError(404, 'Song not found');
-    await fs.promises.unlink(path.join(AUDIO_DIR, song.file.path)).catch(() => {});
+    await removeAudio(song.file);
     await Playlist.updateMany({ owner: req.user._id }, { $pull: { songs: song._id } });
     await User.updateOne({ _id: req.user._id }, { $pull: { favorites: song._id } });
     await cleanupOrphans(req.user._id);

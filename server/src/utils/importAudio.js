@@ -5,7 +5,7 @@ import path from 'node:path';
 import { parseFile, selectCover } from 'music-metadata';
 import Song from '../models/Song.js';
 import Artist from '../models/Artist.js';
-import { AUDIO_DIR, COVER_DIR } from '../config/env.js';
+import { storeAudio, storeCover } from './storage.js';
 import { findOrCreateArtist, findOrCreateAlbum } from './library.js';
 
 function sha1File(file) {
@@ -90,9 +90,11 @@ export async function importAudioFile(owner, file, overrides = {}) {
   const picture = selectCover(common.picture);
   if (picture?.data) {
     const ext = picture.format?.includes('png') ? 'png' : 'jpg';
-    const coverName = `${hash}.${ext}`;
-    await fs.writeFile(path.join(COVER_DIR, coverName), picture.data);
-    cover = `/media/covers/${coverName}`;
+    try {
+      cover = await storeCover({ data: picture.data, name: `${hash}.${ext}` });
+    } catch (e) {
+      console.warn(`Could not save cover for ${originalName}: ${e.message}`);
+    }
   }
 
   const artist = await findOrCreateArtist(owner, artistName);
@@ -103,9 +105,7 @@ export async function importAudioFile(owner, file, overrides = {}) {
 
   // Keep a stable, readable file name on disk
   const ext = path.extname(originalName) || path.extname(absPath) || '.mp3';
-  const finalName = `${hash}${ext.toLowerCase()}`;
-  const finalPath = path.join(AUDIO_DIR, finalName);
-  await moveFile(absPath, finalPath);
+  const stored = await storeAudio(absPath, hash, ext.toLowerCase());
 
   const song = await Song.create({
     owner,
@@ -119,7 +119,7 @@ export async function importAudioFile(owner, file, overrides = {}) {
     lyrics: lyricsToText(common.lyrics),
     cover: cover || album.cover || '',
     file: {
-      path: finalName,
+      ...stored,
       mime: file.mimetype && file.mimetype !== 'application/octet-stream' ? file.mimetype : mimeFromExt(ext),
       size: file.size,
       hash,
@@ -128,27 +128,6 @@ export async function importAudioFile(owner, file, overrides = {}) {
   });
 
   return { song, duplicate: false };
-}
-
-/** rename() can fail on Windows (EPERM/EBUSY) while antivirus or another handle holds the file. */
-async function moveFile(from, to) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      await fs.rename(from, to);
-      return;
-    } catch (e) {
-      if (e.code === 'EXDEV') break;
-      if (!['EPERM', 'EBUSY', 'EACCES'].includes(e.code) || attempt === 4) {
-        // last resort: copy, then try to remove the temp file
-        await fs.copyFile(from, to);
-        await fs.unlink(from).catch(() => {});
-        return;
-      }
-      await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
-    }
-  }
-  await fs.copyFile(from, to);
-  await fs.unlink(from).catch(() => {});
 }
 
 export function mimeFromExt(ext = '') {

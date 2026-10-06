@@ -1,0 +1,26 @@
+# Render Blueprint: New + → Blueprint → pick this repo.
+# Fill the secret values in the Render dashboard when asked.
+services:
+  - type: web
+    name: nagham-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 60d
+      - key: STORAGE
+        value: cloudinary
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: MAX_UPLOAD_MB
+        value: "60"

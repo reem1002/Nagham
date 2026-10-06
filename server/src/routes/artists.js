@@ -9,6 +9,7 @@ import { COVER_DIR } from '../config/env.js';
 import { asyncHandler, HttpError } from '../middleware/error.js';
 import { libraryCounts } from '../utils/counts.js';
 import { SONG_POPULATE } from './songs.js';
+import { storeCover } from '../utils/storage.js';
 
 const router = Router();
 const imageUpload = multer({
@@ -62,7 +63,7 @@ router.patch(
     const update = {};
     if (req.body.name) update.name = req.body.name.trim();
     if (req.body.bio !== undefined) update.bio = req.body.bio;
-    if (req.file) update.image = `/media/covers/${req.file.filename}`;
+    if (req.file) update.image = await storeCover({ tempPath: req.file.path, name: req.file.filename });
     const artist = await Artist.findOneAndUpdate({ _id: req.params.id, owner: req.user._id }, update, { new: true });
     if (!artist) throw new HttpError(404, 'Artist not found');
     res.json(artist);

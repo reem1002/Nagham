@@ -106,6 +106,35 @@ npx cap open android
 
 ---
 
+## رفع السيرفر أونلاين: نفس الحساب على اللاب والموبايل
+
+ثلاث خدمات مجانية:
+
+| الخدمة | بتخزن إيه |
+|---|---|
+| **MongoDB Atlas** | بيانات الحساب: الأغاني والفنانين والبلاي ليستس والمفضلة |
+| **Cloudinary** | ملفات الأغاني نفسها والأغلفة |
+| **Render** | السيرفر (Node/Express) |
+
+استضافات Node المجانية ما بتحفظش الملفات المرفوعة لما السيرفر يعيد التشغيل، عشان كده ملفات الصوت بتتحفظ على Cloudinary.
+
+1. **Atlas:** اعملي cluster مجاني وهاتي الـ connection string، وضيفي `/nagham` قبل علامة `?`. وفي Network Access ضيفي `0.0.0.0/0`.
+2. **Cloudinary:** اعملي حساب على cloudinary.com، ومن الـ Dashboard انسخي **API environment variable**. هتبدأ بـ `cloudinary://`.
+3. **جرّبي من اللاب الأول**، في `server/.env`:
+   ```env
+   MONGO_URI=mongodb+srv://USER:PASS@cluster0.xxxx.mongodb.net/nagham?retryWrites=true&w=majority
+   STORAGE=cloudinary
+   CLOUDINARY_URL=cloudinary://xxxx:yyyy@your-cloud
+   ```
+   بعدها `npm run seed` ثم `npm run dev`، واعملي Import لأغنية. لو اشتغلت، يبقى كله تمام.
+4. **Render:** ارفعي المشروع على GitHub، وبعدين في render.com اختاري **New + → Blueprint** واختاري الـ repo. هيقرأ `render.yaml` ويطلب منك `MONGO_URI` و`CLOUDINARY_URL`. بعد الـ deploy هتاخدي رابط زي `https://nagham-api.onrender.com`.
+5. **الـ APK:** من GitHub Actions اختاري **Android APK** ثم **Run workflow**، وحطي رابط Render في خانة `api_url`. أو سيبيها فاضية وحطيه من Settings → Server جوه التطبيق.
+6. **الواجهة على اللاب:** في `client/.env` حطي `VITE_API_URL=https://nagham-api.onrender.com`، أو غيّريه من Settings → Server.
+
+> Render المجاني بينام بعد 15 دقيقة من غير استخدام، وأول طلب بعدها بياخد حوالي دقيقة. ده بيأثر بس على الإضافة والتحميل. الأغاني المتنزلة على الموبايل بتشتغل في أي وقت حتى من غير نت.
+
+---
+
 ## الـ API
 
 كل المسارات محمية بـ `Authorization: Bearer <token>` ما عدا auth و health.

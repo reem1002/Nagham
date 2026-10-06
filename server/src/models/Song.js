@@ -14,6 +14,9 @@ const songSchema = new mongoose.Schema(
     cover: { type: String, default: '' }, // relative URL e.g. /media/covers/xxx.jpg
     file: {
       path: { type: String, required: true }, // file name inside uploads/audio
+      storage: { type: String, default: 'local' }, // 'local' | 'cloudinary'
+      url: { type: String }, // Cloudinary delivery URL
+      publicId: { type: String },
       mime: { type: String, default: 'audio/mpeg' },
       size: { type: Number, default: 0 },
       hash: { type: String, index: true }, // sha1 – used to skip duplicates
@@ -31,7 +34,11 @@ songSchema.methods.toJSON = function toJSON() {
   const obj = this.toObject();
   obj.streamUrl = `/api/songs/${obj._id}/stream`;
   delete obj.__v;
-  if (obj.file) delete obj.file.path;
+  if (obj.file) {
+    delete obj.file.path;
+    delete obj.file.url;
+    delete obj.file.publicId;
+  }
   return obj;
 };
 
