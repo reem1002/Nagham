@@ -1,27 +1,42 @@
-# نغم · Nagham — Offline Music App (MERN + Android)
+# نغم · Nagham
 
-تطبيق موسيقى شخصي: مكتبتك على السيرفر (Node + Express + MongoDB)، وواجهة React بتشتغل على المتصفح أو كتطبيق Android حقيقي عن طريق Capacitor.
-الأغاني اللي بتنزّليها على الموبايل بتشتغل **من غير إنترنت**، والموسيقى **بتفضل شغالة والشاشة مقفولة** مع أزرار التحكم على شاشة القفل والإشعارات.
+**An offline-first personal music player (MERN + Android).**
 
-> التطبيق بيشغّل ملفات صوتية إنتِ عندك. مافيهوش تحميل من يوتيوب أو أي منصة تانية.
+Nagham is a self-hosted music app. The library lives on a server (Node + Express + MongoDB), and the React client runs in the browser or as a native Android app through Capacitor. Downloaded songs play **without an internet connection**, and playback **continues with the screen locked**, with controls on the lock screen and in the notification shade.
+
+> Nagham plays audio files you already own. It does not download from YouTube or any other platform.
 
 ---
 
-## المميزات
+## Table of contents
+
+- [Features](#features)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Android app](#android-app)
+- [Do I need the server?](#do-i-need-the-server)
+- [Deploying online](#deploying-online)
+- [API reference](#api-reference)
+- [Technical notes](#technical-notes)
+- [Roadmap](#roadmap)
+
+---
+
+## Features
 
 | | |
 |---|---|
-| **المشغّل** | Play/Pause · Previous/Next · Shuffle · Repeat (all / one) · Seek · Volume · Queue بالسحب لإعادة الترتيب · Play next / Add to queue · Sleep timer · Lyrics |
-| **الأوفلاين** | تحميل أغنية / ألبوم / فنان / بلاي ليست كاملة للجهاز (IndexedDB) · التطبيق يفتح ويشتغل من غير نت · الإحصائيات والمفضلة بتتسجل أوفلاين وتتزامن لما النت يرجع |
-| **الشاشة المقفولة** | Android: foreground service + media notification (`@jofr/capacitor-media-session`) · المتصفح/PWA: Media Session API |
-| **الإضافة** | اختيار ملفات أو فولدر كامل · Share من واتساب/تليجرام/Files للتطبيق مباشرة · قراءة الاسم والفنان والألبوم والغلاف والكلمات من الـ tags · لو مفيش tags: `فيروز - نسم علينا الهوى.mp3` بيتقسم لوحده |
-| **فيروز** | صفحة فنانة جاهزة، وأي ملف مكتوب عليه Fairuz / فيروز / Fairouz / Fayrouz بيتجمع في نفس الصفحة |
-| **المكتبة** | Home · Search (عربي وإنجليزي، بيتجاهل أ/إ/آ و ة/ه و ى/ي والتشكيل) · Songs · Artists · Albums · Playlists · Favorites · On this device · Stats |
-| **الحسابات** | JWT auth، أو **"Use on this device only"** من غير حساب ولا سيرفر خالص |
+| **Player** | Play/Pause · Previous/Next · Shuffle · Repeat (all / one) · Seek · Volume · Drag-to-reorder queue · Play next / Add to queue · Sleep timer · Lyrics |
+| **Offline** | Download a song, album, artist, or full playlist to the device (IndexedDB) · The app opens and works without a connection · Stats and favorites are recorded offline and synced when the connection returns |
+| **Lock screen** | Android: foreground service + media notification (`@jofr/capacitor-media-session`) · Browser/PWA: Media Session API |
+| **Importing** | Pick files or a whole folder · Share from WhatsApp, Telegram, or Files directly into the app · Reads title, artist, album, cover art, and lyrics from tags · Without tags, filenames like `فيروز - نسم علينا الهوى.mp3` are split into artist and title automatically |
+| **Fairuz** | A ready-made artist page; any file labeled Fairuz / فيروز / Fairouz / Fayrouz is grouped onto the same page |
+| **Library** | Home · Search (Arabic and English; ignores أ/إ/آ, ة/ه, ى/ي, and diacritics) · Songs · Artists · Albums · Playlists · Favorites · On this device · Stats |
+| **Accounts** | JWT auth, or **"Use on this device only"** with no account and no server at all |
 
 ---
 
-## هيكل المشروع
+## Project structure
 
 ```
 nagham/
@@ -34,138 +49,165 @@ nagham/
 │       └── scripts/seed.js demo account + Fairuz page (+ demo tones with --demo)
 ├── client/                 React (Vite) + PWA + Capacitor
 │   ├── src/
-│   │   ├── player/engine.js     محرك التشغيل (queue, shuffle, repeat, media session, حفظ المكان)
-│   │   ├── lib/downloads.js     مدير التحميل والمكتبة الأوفلاين (IndexedDB)
-│   │   ├── lib/data.js          طبقة البيانات: سيرفر ← كاش ← أوفلاين
-│   │   ├── lib/importer.js      الاستيراد (رفع للسيرفر أو حفظ على الجهاز)
-│   │   ├── lib/native.js        Capacitor: شاشة القفل + Share intent
+│   │   ├── player/engine.js     Playback engine (queue, shuffle, repeat, media session, position saving)
+│   │   ├── lib/downloads.js     Download manager and offline library (IndexedDB)
+│   │   ├── lib/data.js          Data layer: server → cache → offline
+│   │   ├── lib/importer.js      Importing (upload to server or save on device)
+│   │   ├── lib/native.js        Capacitor: lock screen + Share intent
 │   │   ├── sw.js                Service worker (offline shell + share target)
-│   │   └── pages/               كل الشاشات
-│   └── android/                 مشروع Android Studio جاهز
-├── .github/workflows/android-apk.yml   يبني APK على GitHub تلقائيًا
-└── docker-compose.yml                  MongoDB محلي
+│   │   └── pages/               All screens
+│   └── android/                 Ready-to-open Android Studio project
+├── .github/workflows/android-apk.yml   Builds the APK on GitHub automatically
+└── docker-compose.yml                  Local MongoDB
 ```
 
 ---
 
-## التشغيل على الكمبيوتر
+## Getting started
 
-المتطلبات: Node 20+ و MongoDB (محلي بـ Docker، أو MongoDB Atlas المجاني).
+**Requirements:** Node 20+ and MongoDB (local via Docker, or the free tier of MongoDB Atlas).
 
 ```bash
 # 1) MongoDB
-docker compose up -d            # أو حطي رابط Atlas في server/.env
+docker compose up -d            # or set an Atlas connection string in server/.env
 
-# 2) السيرفر
+# 2) Server
 cd server
-cp .env.example .env            # غيّري JWT_SECRET
+cp .env.example .env            # change JWT_SECRET
 npm install
-npm run seed:demo               # demo@nagham.app / nagham123 + صفحة فيروز + نغمات تجريبية
+npm run seed:demo               # demo@nagham.app / nagham123 + Fairuz page + demo tones
 npm run dev                     # http://localhost:5000
 
-# 3) الواجهة (terminal تاني)
+# 3) Client (in a second terminal)
 cd client
 npm install
 npm run dev                     # http://localhost:5173
 ```
 
-افتحي `http://localhost:5173`، سجّلي دخول، وروحي على **Import** وضيفي ملفاتك.
+Open `http://localhost:5173`, log in, go to **Import**, and add audio files.
 
-> `npm run seed` من غير `--demo` بيعمل الحساب وصفحة فيروز بس، من غير النغمات التجريبية.
+> `npm run seed` without `--demo` creates only the account and the Fairuz page, without the demo tones.
 
 ---
 
-## تنزيل التطبيق على الموبايل (Android)
+## Android app
 
-### الطريقة الأسهل: GitHub يبنيه لك
-1. ارفعي المشروع على GitHub repo.
-2. من تبويب **Actions** → **Android APK** → **Run workflow** (ممكن تكتبي عنوان السيرفر في الخانة، أو تسيبيه وتحطيه من Settings في التطبيق).
-3. لما يخلص، نزّلي `nagham-debug-apk` من **Artifacts**، فكّي الـ zip، وافتحي `app-debug.apk` على الموبايل (هيطلب السماح بالتثبيت من مصادر غير معروفة).
+### Option 1: Build with GitHub Actions (easiest)
 
-### من Android Studio
+1. Push the project to a GitHub repository.
+2. Open the **Actions** tab → **Android APK** → **Run workflow**. The server URL can be entered in the `api_url` field, or left empty and set later from Settings in the app.
+3. When the run finishes, download `nagham-debug-apk` from **Artifacts**, unzip it, and open `app-debug.apk` on the phone (Android will ask to allow installation from unknown sources).
+
+### Option 2: Build with Android Studio
+
 ```bash
 cd client
-VITE_API_URL=https://your-api.example.com npm run android:sync   # اختياري: عنوان السيرفر
+VITE_API_URL=https://your-api.example.com npm run android:sync   # optional: server URL
 npx cap open android
 ```
-من Android Studio: وصّلي الموبايل بـ USB (Developer options → USB debugging) واضغطي ▶ Run، أو **Build → Build APK(s)**.
 
-### كـ PWA (من غير بناء خالص)
-لو السيرفر شغال على رابط HTTPS، افتحيه من Chrome على الموبايل → ⋮ → **Install app**. هيظهر في قايمة Share، ويشتغل أوفلاين، والتشغيل بيكمل والشاشة مقفولة في أغلب الأجهزة. تطبيق الـ APK أضمن في التشغيل في الخلفية.
+In Android Studio, connect the phone over USB (Developer options → USB debugging) and press ▶ Run, or use **Build → Build APK(s)**.
 
----
+### Option 3: Install as a PWA (no build)
 
-## السيرفر: محتاجاه ولا لأ؟
-
-- **مش محتاجاه** لو اخترتي "Use on this device only": الأغاني بتتحفظ جوه التطبيق على الموبايل بس.
-- **محتاجاه** عشان المكتبة تبقى على حسابك وتشوفيها من أكتر من جهاز. الموبايل بيكلّم السيرفر وقت الإضافة والتحميل بس، وبعد كده كل اللي نزّلتيه بيشتغل من غير نت.
-
-خيارات الاستضافة:
-- **على اللابتوب في البيت:** شغّلي السيرفر، وفي التطبيق Settings → Server اكتبي `http://IP-اللابتوب:5000` (لازم نفس الواي فاي).
-- **أونلاين:** MongoDB Atlas (مجاني) + أي استضافة Node فيها **disk دائم** للملفات (Railway volume، Render disk، أو VPS). الملفات بتتحفظ في `server/uploads/`.
+If the server is reachable over HTTPS, open it in Chrome on the phone → ⋮ → **Install app**. The PWA appears in the Share menu, works offline, and keeps playing with the screen locked on most devices. The APK is more reliable for background playback.
 
 ---
 
-## رفع السيرفر أونلاين: نفس الحساب على اللاب والموبايل
+## Do I need the server?
 
-ثلاث خدمات مجانية:
+- **No**, if "Use on this device only" is selected. Songs are stored inside the app on the phone.
+- **Yes**, if the library should belong to an account and be available on more than one device. The phone talks to the server only when importing and downloading; everything already downloaded plays without a connection.
 
-| الخدمة | بتخزن إيه |
+Hosting options:
+
+- **On a home laptop:** run the server, then in the app go to Settings → Server and enter `http://<LAPTOP-IP>:5000`. Both devices must be on the same Wi-Fi network.
+- **Online:** see [Deploying online](#deploying-online).
+
+---
+
+## Deploying online
+
+Deploying the server gives the same account and library on the laptop and the phone. The setup uses three free services:
+
+| Service | Stores |
 |---|---|
-| **MongoDB Atlas** | بيانات الحساب: الأغاني والفنانين والبلاي ليستس والمفضلة |
-| **Cloudinary** | ملفات الأغاني نفسها والأغلفة |
-| **Render** | السيرفر (Node/Express) |
+| **MongoDB Atlas** | Account data: songs, artists, playlists, favorites |
+| **Cloudinary** | The audio files and cover art |
+| **Render** | The server (Node/Express) |
 
-استضافات Node المجانية ما بتحفظش الملفات المرفوعة لما السيرفر يعيد التشغيل، عشان كده ملفات الصوت بتتحفظ على Cloudinary.
+Free Node hosts do not keep uploaded files across restarts, which is why audio files are stored on Cloudinary.
 
-1. **Atlas:** اعملي cluster مجاني وهاتي الـ connection string، وضيفي `/nagham` قبل علامة `?`. وفي Network Access ضيفي `0.0.0.0/0`.
-2. **Cloudinary:** اعملي حساب على cloudinary.com، ومن الـ Dashboard انسخي **API environment variable**. هتبدأ بـ `cloudinary://`.
-3. **جرّبي من اللاب الأول**، في `server/.env`:
-   ```env
-   MONGO_URI=mongodb+srv://USER:PASS@cluster0.xxxx.mongodb.net/nagham?retryWrites=true&w=majority
-   STORAGE=cloudinary
-   CLOUDINARY_URL=cloudinary://xxxx:yyyy@your-cloud
-   ```
-   بعدها `npm run seed` ثم `npm run dev`، واعملي Import لأغنية. لو اشتغلت، يبقى كله تمام.
-4. **Render:** ارفعي المشروع على GitHub، وبعدين في render.com اختاري **New + → Blueprint** واختاري الـ repo. هيقرأ `render.yaml` ويطلب منك `MONGO_URI` و`CLOUDINARY_URL`. بعد الـ deploy هتاخدي رابط زي `https://nagham-api.onrender.com`.
-5. **الـ APK:** من GitHub Actions اختاري **Android APK** ثم **Run workflow**، وحطي رابط Render في خانة `api_url`. أو سيبيها فاضية وحطيه من Settings → Server جوه التطبيق.
-6. **الواجهة على اللاب:** في `client/.env` حطي `VITE_API_URL=https://nagham-api.onrender.com`، أو غيّريه من Settings → Server.
+### 1. MongoDB Atlas
 
-> Render المجاني بينام بعد 15 دقيقة من غير استخدام، وأول طلب بعدها بياخد حوالي دقيقة. ده بيأثر بس على الإضافة والتحميل. الأغاني المتنزلة على الموبايل بتشتغل في أي وقت حتى من غير نت.
+Create a free cluster and copy its connection string. Add `/nagham` before the `?` to select the database. Under **Network Access**, add `0.0.0.0/0`.
+
+### 2. Cloudinary
+
+Create an account at [cloudinary.com](https://cloudinary.com). From the Dashboard, copy the **API environment variable**, which starts with `cloudinary://`.
+
+### 3. Test locally first
+
+In `server/.env`:
+
+```env
+MONGO_URI=mongodb+srv://USER:PASS@cluster0.xxxx.mongodb.net/nagham?retryWrites=true&w=majority
+STORAGE=cloudinary
+CLOUDINARY_URL=cloudinary://xxxx:yyyy@your-cloud
+```
+
+Then run `npm run seed` followed by `npm run dev`, and import a song. If it plays, the configuration is correct.
+
+### 4. Deploy to Render
+
+Push the project to GitHub, then on [render.com](https://render.com) choose **New + → Blueprint** and select the repository. Render reads `render.yaml` and asks for `MONGO_URI` and `CLOUDINARY_URL`. After the deploy completes, the service gets a URL such as `https://nagham-api.onrender.com`.
+
+### 5. Build the APK against the deployed server
+
+In GitHub Actions, run **Android APK** and enter the Render URL in the `api_url` field. Alternatively, leave it empty and set the URL from Settings → Server inside the app.
+
+### 6. Point the web client at the server
+
+In `client/.env`, set `VITE_API_URL=https://nagham-api.onrender.com`, or change it from Settings → Server.
+
+> **Note:** Render's free tier spins down after 15 minutes of inactivity, and the first request afterwards takes about a minute. This affects only importing and downloading. Songs already downloaded to the phone play at any time, even offline.
 
 ---
 
-## الـ API
+## API reference
 
-كل المسارات محمية بـ `Authorization: Bearer <token>` ما عدا auth و health.
+All routes require `Authorization: Bearer <token>`, except auth and health.
 
-| Method | Path | |
+| Method | Path | Description |
 |---|---|---|
-| POST | `/api/auth/register` · `/api/auth/login` | حساب جديد / دخول |
-| GET | `/api/auth/me` | المستخدم الحالي |
-| GET | `/api/songs?q=&artist=&album=&sort=recent\|title\|plays` | الأغاني |
-| POST | `/api/songs/upload` | رفع ملفات (`files[]`، واختياري `artist`, `album`) |
-| GET | `/api/songs/:id/stream` | تشغيل بـ Range (و `?download=1` للتحميل) |
-| PATCH / DELETE | `/api/songs/:id` | تعديل البيانات والكلمات / حذف |
-| GET | `/api/artists` · `/api/artists/:id` | الفنانين / صفحة فنان |
-| GET | `/api/albums` · `/api/albums/:id` | الألبومات |
-| CRUD | `/api/playlists` · `/api/playlists/:id/songs` | البلاي ليستس |
-| GET/POST/DELETE | `/api/me/favorites/:songId` | المفضلة |
-| POST/GET | `/api/me/history` · `/api/me/recent` · `/api/me/stats` · `/api/me/home` | السجل والإحصائيات |
-| GET | `/api/search?q=` | بحث في كل حاجة |
+| POST | `/api/auth/register` · `/api/auth/login` | Sign up / log in |
+| GET | `/api/auth/me` | Current user |
+| GET | `/api/songs?q=&artist=&album=&sort=recent\|title\|plays` | List songs |
+| POST | `/api/songs/upload` | Upload files (`files[]`, optional `artist`, `album`) |
+| GET | `/api/songs/:id/stream` | Range streaming (`?download=1` for downloads) |
+| PATCH / DELETE | `/api/songs/:id` | Edit metadata and lyrics / delete |
+| GET | `/api/artists` · `/api/artists/:id` | Artists / artist page |
+| GET | `/api/albums` · `/api/albums/:id` | Albums |
+| CRUD | `/api/playlists` · `/api/playlists/:id/songs` | Playlists |
+| GET/POST/DELETE | `/api/me/favorites/:songId` | Favorites |
+| POST/GET | `/api/me/history` · `/api/me/recent` · `/api/me/stats` · `/api/me/home` | History and stats |
+| GET | `/api/search?q=` | Search across everything |
 
 ---
 
-## ملاحظات تقنية
+## Technical notes
 
-- **التشغيل في الخلفية على Android:** الـ WebView بيتجمد لما الشاشة تتقفل، فالـ plugin بيشغّل foreground service نوعه `mediaPlayback` طول ما فيه حاجة شغالة. الصلاحيات موجودة في `AndroidManifest.xml`.
-- **الأوفلاين:** كل أغنية متنزلة متخزنة كـ Blob في IndexedDB مع الغلاف. التطبيق بيطلب `navigator.storage.persist()` عشان النظام ما يمسحهاش. كل رد من الـ API بيتخزن، فالشاشات بتفتح من غير نت.
-- **الـ Share:** في الـ APK عن طريق `send-intent`، وفي الـ PWA عن طريق Web Share Target في الـ service worker.
-- **HTTP على الشبكة المحلية:** `capacitor.config.json` فيه `androidScheme: "http"` و `cleartext: true` عشان التطبيق يقدر يكلّم سيرفر على `http://192.168.x.x`. لو السيرفر HTTPS بس، ممكن تشيليهم.
-- **مكان الملفات على السيرفر:** `server/uploads/audio` (اسم الملف = sha1، فالملف المكرر ما بيترفعش مرتين) و `server/uploads/covers`.
+- **Background playback on Android:** The WebView freezes when the screen locks, so the plugin runs a `mediaPlayback` foreground service whenever something is playing. The required permissions are declared in `AndroidManifest.xml`.
+- **Offline storage:** Each downloaded song is stored as a Blob in IndexedDB together with its cover. The app requests `navigator.storage.persist()` so the system does not evict the data. Every API response is cached, so screens open without a connection.
+- **Share:** In the APK, sharing works through `send-intent`; in the PWA, through the Web Share Target in the service worker.
+- **HTTP on a local network:** `capacitor.config.json` sets `androidScheme: "http"` and `cleartext: true` so the app can reach a server at `http://192.168.x.x`. Both can be removed if the server is HTTPS-only.
+- **File storage on the server:** With local storage, files live in `server/uploads/audio` (the filename is the SHA-1 of the content, so duplicates are never stored twice) and `server/uploads/covers`. With `STORAGE=cloudinary`, files are stored on Cloudinary instead.
 
-## أفكار للمرحلة الجاية
-- كلمات متزامنة (LRC) مع التمرير التلقائي
-- Equalizer و crossfade
-- تخزين الملفات على S3 / Cloudinary بدل الـ disk
-- iOS (محتاج Share Extension في Xcode للـ Share)
+---
+
+## Roadmap
+
+- [ ] Synced lyrics (LRC) with auto-scroll
+- [ ] Equalizer and crossfade
+- [ ] S3-compatible storage backend
+- [ ] iOS support (requires a Share Extension in Xcode for Share)
